@@ -13,6 +13,7 @@
 #include <string>
 #include <thread>
 #include <mutex>
+#include <fstream>
 
 #define DELAY 3
 #define TEMP 22
@@ -53,6 +54,9 @@ class Terminal {
 class I2C{
 protected:
     // zone memoire d'echange pour chaque element connecte sur le bus
+    // chaque case du tableau represente une chaine de caracteres echangee entre un device numero i (addr) et la carte,
+    // du point de vue la carte. En revanche chaque objet de type de device pointera sur le meme objet I2C, qui est l'attribut
+    // de la carte
   char * registre[MAX_I2C_DEVICES];
     // etat de la zone memoire d'echange pour chaque element vide ou pas
   bool vide[MAX_I2C_DEVICES];
@@ -110,7 +114,7 @@ public:
   Terminal Serial;
     // threads representant chaque senseur/actionneur sur le bus I2C
   thread *tabthreadbus[MAX_I2C_DEVICES];
-    
+
 // simulation de la boucle de controle arduino
     void run();
   // accroachage d'un senseur/actionneur à une pin

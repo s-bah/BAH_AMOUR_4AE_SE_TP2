@@ -118,6 +118,7 @@ void Device::setI2CAddr(int addr, I2C * bus){
 void Board::run(){
   try{
     setup();
+    sleep(1);
     while(1) loop();
   }
   catch(BoardException e){
@@ -125,10 +126,12 @@ void Board::run(){
   }
 }
 
+// Board et device "se mettent" d'accord sur la zone memoire lie pin et son type (output ou input)
 void Board::pin(int p, Device& s){
   s.setPinMem(&io[p], &stateio[p]);
+  // au passage on lance le run du capteur qui fonctionne a partir de la ligne suivante
   tabthreadpin[p]=new thread(&Device::run,&s);
-  
+
 }
 
 void Board::pinMode(int p,enum typeio t){
@@ -157,16 +160,20 @@ void Board::analogWrite(int i, int l){
   else
     throw BoardException(INOUT);
 }
-
+// On vient lire sur le pin numero i, la valeur de la tension
 int Board::analogRead(int i){
   int   result=0;
-  if (stateio[i]==INPUT)
-    result= io[i];
+  if (stateio[i]==INPUT){
+     result= io[i];
+     }
   else
     throw BoardException(INOUT);
   return result;
 }
-
+// bien se rappeler que la carte Board a un champ I2C qui a lui meme un champ registre qui est un tableau dont chaque case
+// represente un echange avec un device. Donc chaque device se voit attribuer un numero de file si on veut
+// Donc j'imagine que chaque device lorsqu'il voudra communiquer devra filer son numero dans le tableau
+// Attention : ne pas confondre le bus I2C et le tableau de pin (registre) de la classe Boad ;
 void Board::i2c(int addr,Device& dev){
   if ((addr<0)||(addr>=MAX_I2C_DEVICES))
     throw BoardException(ADDRESS);

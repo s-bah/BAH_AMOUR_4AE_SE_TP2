@@ -5,6 +5,9 @@
 
 #include "core_simulation.h"
 
+
+
+
 // class BoardException
 int BoardException::get(){return num;}
 
@@ -29,8 +32,13 @@ void Terminal::begin(int speed){
   }
 }
 void Terminal::println(string s){
-  cout <<"Serial: "<< s<<endl;
+
+  cout <<"Serial: "<< s<<endl<<endl<<endl;
+
+
 }
+
+// ------------------------------------------------ classe I2C -------------------------------------
 
 // representatoin du bus I2C
 I2C::I2C(){
@@ -56,6 +64,7 @@ int I2C::write(int addr, char* bytes, int size){
     throw BoardException(SIZEXC);
   tabmutex[addr].lock();
   memcpy(registre[addr],bytes,size*sizeof(char));
+
   vide[addr]=false;
   tabmutex[addr].unlock();
   return size;
@@ -70,6 +79,7 @@ int I2C::requestFrom(int addr, char* bytes, int size){
   if (vide[addr]==false){
     tabmutex[addr].lock();
     memcpy(bytes,registre[addr],size*sizeof(char));
+
     vide[addr]=true;
     tabmutex[addr].unlock();
     result =size;
@@ -89,6 +99,9 @@ bool* I2C::getVide(int addr){
   return (&vide[addr]);
 }
 
+// ------------------------------------------------ classe Device -------------------------------------
+
+
 // classe generique reprenstant un capteur/actionneur
 Device::Device(){
   ptrtype=NULL;
@@ -98,86 +111,161 @@ Device::Device(){
 }
 
 void Device::run(){
-  while(1){
-    cout << "empty device\n";
-    sleep(3);
-  }
+    while(1){
+        cout << "empty device\n";
+        sleep(3);
+    }
 }
 
 void Device::setPinMem(unsigned short* ptr,enum typeio *c){
-  ptrtype=c;
-  ptrmem=ptr;
+    ptrtype=c;
+    ptrmem=ptr;
 }
 
 void Device::setI2CAddr(int addr, I2C * bus){
-  i2caddr=addr;
-  i2cbus=bus;
+    i2caddr=addr;
+    i2cbus=bus;
 }
+
+
+// ------------------------------------------------ classe Board  -------------------------------------
 
 // classe representant une carte arduino
 void Board::run(){
-  try{
-    setup();
-    sleep(1);
-    while(1) loop();
-  }
-  catch(BoardException e){
-    cout <<"exception: "<<e.get() <<endl;
-  }
+    try{
+        setup();
+        ;
+        while(1) loop();
+    }
+    catch(BoardException e){
+        cout <<"exception: "<<e.get() <<endl;
+    }
 }
 
 // Board et device "se mettent" d'accord sur la zone memoire lie pin et son type (output ou input)
 void Board::pin(int p, Device& s){
-  s.setPinMem(&io[p], &stateio[p]);
-  // au passage on lance le run du capteur qui fonctionne a partir de la ligne suivante
-  tabthreadpin[p]=new thread(&Device::run,&s);
+    s.setPinMem(&io[p], &stateio[p]);
+    // au passage on lance le run du capteur qui fonctionne a partir de la ligne suivante
+    tabthreadpin[p]=new thread(&Device::run,&s);
 
 }
 
 void Board::pinMode(int p,enum typeio t){
-  stateio[p]=t;
+    stateio[p]=t;
 }
 
 void Board::digitalWrite(int i, int l){
-  if (stateio[i]==OUTPUT)
-    io[i]=l;
-  else
-    throw BoardException(INOUT);
+    if (stateio[i]==OUTPUT)
+        io[i]=l;
+    else
+        throw BoardException(INOUT);
 }
 
 int Board::digitalRead(int i){
-  int   result=0;
-  if (stateio[i]==INPUT)
-    result= io[i];
-  else
-    throw BoardException(INOUT);
-  return result;
+    int   result=0;
+    if (stateio[i]==INPUT)
+        result= io[i];
+    else
+        throw BoardException(INOUT);
+    return result;
 }
 
 void Board::analogWrite(int i, int l){
-  if (stateio[i]==OUTPUT)
-    io[i]=l;
-  else
-    throw BoardException(INOUT);
+    if (stateio[i]==OUTPUT)
+        io[i]=l;
+    else
+        throw BoardException(INOUT);
 }
+
 // On vient lire sur le pin numero i, la valeur de la tension
 int Board::analogRead(int i){
-  int   result=0;
-  if (stateio[i]==INPUT){
-     result= io[i];
-     }
-  else
-    throw BoardException(INOUT);
-  return result;
+    int   result=0;
+    if (stateio[i]==INPUT){
+        result= io[i];
+        }
+    else
+        throw BoardException(INOUT);
+    return result;
 }
 // bien se rappeler que la carte Board a un champ I2C qui a lui meme un champ registre qui est un tableau dont chaque case
 // represente un echange avec un device. Donc chaque device se voit attribuer un numero de file si on veut
 // Donc j'imagine que chaque device lorsqu'il voudra communiquer devra filer son numero dans le tableau
 // Attention : ne pas confondre le bus I2C et le tableau de pin (registre) de la classe Boad ;
 void Board::i2c(int addr,Device& dev){
-  if ((addr<0)||(addr>=MAX_I2C_DEVICES))
-    throw BoardException(ADDRESS);
-  dev.setI2CAddr(addr,&bus);
-  tabthreadbus[addr]=new thread(&Device::run,&dev);
+    if ((addr<0)||(addr>=MAX_I2C_DEVICES))
+        throw BoardException(ADDRESS);
+    dev.setI2CAddr(addr,&bus);
+    tabthreadbus[addr]=new thread(&Device::run,&dev);
 }
+
+void Board :: set_Rfid(Lecteur_Rfid &r){
+    sck=0;
+    r.set_Communication_Rfid(&sck,mosi,miso);
+    tabthreadrfid[0]=new thread(&Lecteur_Rfid::run,&r);
+
+}
+
+
+
+// ------------------------------------------------ classe Interrupteur -------------------------------------
+
+
+    Interrupteur :: Interrupteur() : state(0){}
+
+    int Interrupteur :: getState() {return state;}
+    void Interrupteur :: setState(int i){state = i;}
+
+
+
+
+// ------------------------------------------------ classe  Lecteur RFID -------------------------------------
+
+
+    Lecteur_Rfid :: Lecteur_Rfid(){
+
+        for(int i =0 ; i<3;i++){
+        alea.push_back((char)(97+i));
+
+        }
+
+
+    }
+
+
+
+   void Lecteur_Rfid :: set_Communication_Rfid(int * i, char mosi_board[], char miso_board[]){
+   sck = i;
+   mosi = mosi_board;
+   miso = miso_board;
+   }
+
+    bool Lecteur_Rfid :: detecter(){
+
+        random_shuffle(alea.begin(),alea.end());
+
+        for (int i =0; i<3;i++){
+            miso[i] = alea[i];
+        }
+        miso[3] = '\n';
+        return true;
+    }
+
+    void Lecteur_Rfid :: run(){
+
+        while(1){
+
+           if (*sck==1){
+
+            detecter();
+            cout<<"Lecteur RFID, sequence tag : ";
+            for(int j=0;j<3;j++){
+                cout<<miso[j];
+            }
+            cout<<endl;
+           }
+        //2
+        sleep(4);
+        }
+    }
+
 

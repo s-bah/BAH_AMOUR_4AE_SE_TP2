@@ -14,6 +14,8 @@
 #include <thread>
 #include <mutex>
 #include <fstream>
+#include <vector>
+#include <algorithm>
 
 #define DELAY 3
 #define TEMP 22
@@ -99,21 +101,69 @@ public:
     void setI2CAddr(int addr, I2C * bus);
 };
 
+
+
+
+// ------------------------------------------------ interrupteur -------------------------------------
+
+
+class Interrupteur {
+
+protected :
+    int state ;
+public :
+    Interrupteur();
+    int getState();
+    void setState(int i);
+
+};
+
+
+
+// ------------------------------------------------ Lecteur RFID -------------------------------------
+
+class Lecteur_Rfid  {
+protected :
+
+    vector <char> alea ; // pour simuler des series aleatoires de char telle une sequence
+    int * sck;
+    char * miso;
+    char * mosi;
+
+public :
+    Lecteur_Rfid();
+
+    void set_Communication_Rfid(int * i, char mosi_board[], char miso_board[]);
+
+    bool detecter();
+
+    virtual void run();
+};
+
 // classe representant une carte arduino
 class Board{
 public:
- // valeur sur les pin
-  unsigned short io[MAX_IO_PIN];
-    // pin d'entree ou de sortie
-  enum typeio stateio[MAX_IO_PIN];
-    // threads representant chaque senseur/actionneur sur le pins analogique et digitale
-  thread *tabthreadpin[MAX_IO_PIN];
-    // representation du bus I2C
-  I2C bus;
-    // representation de la liaison terminal
-  Terminal Serial;
-    // threads representant chaque senseur/actionneur sur le bus I2C
-  thread *tabthreadbus[MAX_I2C_DEVICES];
+     // valeur sur les pin
+      unsigned short io[MAX_IO_PIN];
+        // pin d'entree ou de sortie
+      enum typeio stateio[MAX_IO_PIN];
+        // threads representant chaque senseur/actionneur sur le pins analogique et digitale
+      thread *tabthreadpin[MAX_IO_PIN];
+        // representation du bus I2C
+      I2C bus;
+        // representation de la liaison terminal
+      Terminal Serial;
+        // threads representant chaque senseur/actionneur sur le bus I2C
+      thread *tabthreadbus[MAX_I2C_DEVICES];
+
+      thread * tabthreadrfid[1];
+
+
+      int sck;
+      char mosi[4];
+      char miso[4];
+
+
 
 // simulation de la boucle de controle arduino
     void run();
@@ -132,10 +182,16 @@ public:
    // fonction arduino : ecriture analogique sur une pin
     int analogRead(int i);
   // fonction arduino : initialisation de la carte arduino
-  void setup();
+    void setup();
     // fonction arduino : boucle de controle de la carte arduino
-  void loop();
+    void loop();
+
+    void set_Rfid(Lecteur_Rfid& r);
+
 };
+
+
+
 
 #endif
 

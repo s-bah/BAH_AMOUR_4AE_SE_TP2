@@ -1,0 +1,5 @@
+abc
+bca
+acb
+ccc
+bac
